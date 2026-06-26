@@ -35,6 +35,8 @@ jobs:
 
   publish-pypi:
     runs-on: ubuntu-latest
+    permissions:
+      id-token: write # Required for PyPI Trusted Publishing (OIDC)
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
@@ -47,17 +49,14 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install build twine
+          pip install build
 
       - name: Build distribution
         run: |
           cd packages/python
           python -m build
 
-      - name: Publish to PyPI
-        env:
-          TWINE_USERNAME: __token__
-          TWINE_PASSWORD: ${{ secrets.PYPI_API_TOKEN }}
-        run: |
-          cd packages/python
-          twine upload dist/*
+      - name: Publish to PyPI via Trusted Publishing
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          packages-dir: packages/python/dist/
