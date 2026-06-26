@@ -82,6 +82,72 @@ print(f"Responded by: {result.provider} ({result.model})")
 
 ---
 
+## Environment Variables & Default Models
+
+`omnicall-llm` reads the following environment variables. Set any or all of them depending on which providers you want to make available:
+
+| Provider | Environment Variable | Default Model | Base URL (OpenAI-compatible) |
+| --- | --- | --- | --- |
+| **Google Gemini** | `GEMINI_API_KEY` | `gemini-2.5-flash` | Direct Google REST API |
+| **Groq** | `GROQ_API_KEY` | `llama-3.3-70b-versatile` | `https://api.groq.com/openai/v1` |
+| **SambaNova** | `SAMBANOVA_API_KEY` | `Meta-Llama-3.1-70B-Instruct` | `https://api.sambanova.ai/v1` |
+| **Cerebras** | `CEREBRAS_API_KEY` | `llama-3.3-70b` | `https://api.cerebras.ai/v1` |
+| **OpenRouter** | `OPENROUTER_API_KEY` | `meta-llama/llama-3.3-70b-instruct:free` | `https://openrouter.ai/api/v1` |
+| **Mistral AI** | `MISTRAL_API_KEY` | `mistral-large-latest` | `https://api.mistral.ai/v1` |
+| **OpenAI** | `OPENAI_API_KEY` | `gpt-4o-mini` | `https://api.openai.com/v1` |
+
+---
+
+## LangChain Integration
+
+You can easily wrap `OmniCall` in a custom LangChain model class to use it within standard LangChain workflows:
+
+### Node.js (LangChain.js)
+```typescript
+import { SimpleChatModel } from "@langchain/core/language_models/chat_models";
+import { OmniCall } from "omnicall-llm";
+
+export class OmniCallChatModel extends SimpleChatModel {
+  private client = new OmniCall();
+
+  async _call(prompt: string): Promise<string> {
+    const response = await this.client.generate(prompt);
+    if (response.success) return response.text;
+    throw new Error(`OmniCall failed: ${JSON.stringify(response.errors)}`);
+  }
+
+  _llmType(): string {
+    return "omnicall";
+  }
+}
+```
+
+### Python (LangChain)
+```python
+from typing import Any, List, Optional
+from langchain_core.language_models.llms import LLM
+from omnicall_llm import OmniCall
+
+class OmniCallLLM(LLM):
+    client: Any = None
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.client = OmniCall()
+
+    def _call(self, prompt: str, **kwargs: Any) -> str:
+        response = self.client.generate(prompt, **kwargs)
+        if response.success:
+            return response.text
+        raise RuntimeError(f"OmniCall failed. Errors: {response.errors}")
+
+    @property
+    def _llm_type(self) -> str:
+        return "omnicall"
+```
+
+---
+
 ## License
 
 MIT License.
