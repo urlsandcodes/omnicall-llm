@@ -124,6 +124,36 @@ Here is a calculation of your **Combined Free capacity** when all keys are activ
 
 ---
 
+## Embedding Fallback Strategies & Dimension Warnings
+
+When using `OmniEmbed`, the library automatically attempts to resolve embeddings across different providers. However, **vector dimension compatibility** is critical:
+
+> [!WARNING]
+> Different embedding models output vectors with different dimension sizes and distinct semantic vector spaces. 
+> You **cannot** mix vectors from different models in a single vector search collection/index.
+
+For this reason, we recommend the following strategies:
+
+### 1. Identical-Model Failover (Recommended)
+Fallback between different API hosting endpoints for the **exact same model weight**. This preserves vector dimension and semantic alignment.
+- **Model**: `sentence-transformers/all-MiniLM-L6-v2` (384 dimensions)
+- **Providers**: Hugging Face Inference API, custom Hugging Face endpoints/mirrors, or other hosters serving the identical weight.
+
+### 2. Cross-Model Failover
+If you fallback from a proprietary API (e.g. OpenAI) to another (e.g. Gemini), the vector dimensions and semantic spaces **will mismatch**. The returned `EmbeddingResponse` contains `dimensions` and `model` fields so that your application can detect when a fallback occurred and handle it (e.g., direct it to a separate search index or notify the client).
+
+### Supported Embedding Models & Environment Keys
+
+| Provider | Environment Variable | Default Model | Dimensions |
+| --- | --- | --- | --- |
+| **Hugging Face** | `HUGGINGFACE_API_KEY` | `sentence-transformers/all-MiniLM-L6-v2` | 384 |
+| **OpenAI** | `OPENAI_API_KEY` | `text-embedding-3-small` | 1536 |
+| **Google Gemini** | `GEMINI_API_KEY` | `text-embedding-004` | 768 |
+| **Cohere** | `COHERE_API_KEY` | `embed-english-v3.0` | 1024 |
+| **Jina AI** | `JINA_API_KEY` | `jina-embeddings-v2-base-en` | 768 |
+
+---
+
 ## LangChain Integration
 
 You can easily wrap `OmniCall` in a custom LangChain model class to use it within standard LangChain workflows:
