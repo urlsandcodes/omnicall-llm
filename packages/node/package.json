@@ -1,6 +1,6 @@
 {
   "name": "omnicall-llm",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "Unified multi-provider LLM caller with automatic fallback",
   "main": "./dist/cjs/index.js",
   "module": "./dist/esm/index.js",
