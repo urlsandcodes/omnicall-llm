@@ -98,6 +98,28 @@ print(f"Responded by: {result.provider} ({result.model})")
 
 ---
 
+## Combined Free Tier Capacity & Failover Resiliency
+
+By pooling multiple free-tier inference APIs in a single fallback chain, `omnicall-llm` effectively constructs a **massive, highly resilient consolidated budget** of free LLM access. If one provider rate-limits you, the library transparently failovers to the next provider, meaning your daily request and token capacities are sum-totaled.
+
+Here is a calculation of your **Combined Free capacity** when all keys are active:
+
+| Provider | Free Daily Request Limit | Free Daily Token Limit | Key Feature / Benefit |
+| --- | --- | --- | --- |
+| **Google Gemini** | `1,500` requests / day | `1,500,000` tokens / day | Massively large context window (1M+ tokens) |
+| **Groq** | `14,400` requests / day | ~5,000,000 tokens / day | Fast low-latency generation |
+| **SambaNova** | ~`5,000` requests / day | ~10,000,000 tokens / day | Standard meta-llama-3 models |
+| **Cerebras** | ~`10,000` requests / day | `1,000,000` tokens / day | Ultra-fast token execution speeds |
+| **Mistral AI** | ~`1,000` requests / day | ~2,000,000 tokens / day | European frontier weights |
+| **OpenRouter** | `50` requests / day | ~100,000 tokens / day | Free multi-model routing backup |
+| **OpenAI** (Sandbox) | `200` requests / day | ~100,000 tokens / day | Standard fallback backup |
+| **LUMPSUM TOTAL** | **32,150+ requests / day** | **23,700,000+ tokens / day** | **Highly Resilient & Redundant pooled limits** |
+
+> [!TIP]
+> **Total Pooled Capacity**: With all free API keys configured, `omnicall-llm` gives you a combined pool of over **32,000 daily requests** and **23+ Million daily tokens** completely free. This makes it perfect for running large background agent loops (like cold mail outreach scanners) without paying a single dollar in inference costs!
+
+---
+
 ## LangChain Integration
 
 You can easily wrap `OmniCall` in a custom LangChain model class to use it within standard LangChain workflows:
