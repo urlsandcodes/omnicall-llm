@@ -1,5 +1,5 @@
 {
-  "name": "omnicall-llm",
+  "name": "@urlsandcodes/omnicall-llm",
   "version": "1.0.0",
   "description": "Unified multi-provider LLM caller with automatic fallback",
   "main": "./dist/cjs/index.js",

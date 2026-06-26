@@ -3,7 +3,7 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "omnicall-llm"
+name = "omnicall-llm-caller"
 version = "1.0.0"
 description = "Unified multi-provider LLM caller with automatic fallback"
 readme = "README.md"
