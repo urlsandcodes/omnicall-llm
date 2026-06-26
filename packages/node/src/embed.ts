@@ -1,49 +1,44 @@
-import { ProviderName, GenerateOptions, OmniCallResponse, FallbackItem } from './types.js';
-import { PROVIDERS, callProviderAPI } from './providers.js';
+import { ProviderName, EmbeddingOptions, EmbeddingResponse, FallbackItem } from './types.js';
+import { PROVIDERS, callEmbeddingAPI } from './providers.js';
 
-export * from './types.js';
-export * from './embed.js';
-
-export interface OmniCallConfig {
+export interface OmniEmbedConfig {
   apiKeys?: Partial<Record<ProviderName, string>>;
   defaultFallbackOrder?: ProviderName[];
 }
 
-const DEFAULT_PRIORITY: ProviderName[] = [
-  'gemini',
-  'groq',
-  'sambanova',
-  'cerebras',
-  'openrouter',
-  'mistral',
+const DEFAULT_EMBEDDING_PRIORITY: ProviderName[] = [
+  'huggingface',
   'openai',
+  'gemini',
+  'cohere',
+  'jina',
 ];
 
-export class OmniCall {
+export class OmniEmbed {
   private apiKeys: Partial<Record<ProviderName, string>> = {};
   private defaultFallbackOrder: ProviderName[];
 
-  constructor(config?: OmniCallConfig) {
+  constructor(config?: OmniEmbedConfig) {
     // Initialize API keys from config or process.env
-    for (const provider of DEFAULT_PRIORITY) {
+    for (const provider of DEFAULT_EMBEDDING_PRIORITY) {
       const configKey = PROVIDERS[provider].envKey;
       this.apiKeys[provider] =
         config?.apiKeys?.[provider] ||
         (typeof process !== 'undefined' ? process.env[configKey] : undefined);
     }
 
-    this.defaultFallbackOrder = config?.defaultFallbackOrder || DEFAULT_PRIORITY;
+    this.defaultFallbackOrder = config?.defaultFallbackOrder || DEFAULT_EMBEDDING_PRIORITY;
   }
 
   /**
-   * Generates text content using the configured providers and fallback logic.
-   * @param prompt The prompt to send to the LLM.
-   * @param options Execution options including custom fallbacks, temperature, etc.
+   * Generates a vector embedding using the configured providers and fallback logic.
+   * @param prompt The text prompt to embed.
+   * @param options Execution options including custom fallbacks, model choice, etc.
    */
-  async generate(
+  async embed(
     prompt: string,
-    options?: GenerateOptions & { provider?: ProviderName }
-  ): Promise<OmniCallResponse> {
+    options?: EmbeddingOptions & { provider?: ProviderName }
+  ): Promise<EmbeddingResponse> {
     const errors: Array<{ provider: ProviderName; model: string; error: string }> = [];
 
     // 1. Resolve the sequence of provider/model attempts
@@ -53,7 +48,7 @@ export class OmniCall {
       // Use user-provided fallback sequence
       queue = options.fallback.map((item) => ({
         provider: item.provider,
-        model: item.model || PROVIDERS[item.provider].defaultModel || '',
+        model: item.model || PROVIDERS[item.provider].defaultEmbeddingModel,
       }));
     } else {
       // Build fallback queue dynamically
@@ -63,40 +58,38 @@ export class OmniCall {
       if (primaryProvider) {
         queue.push({
           provider: primaryProvider,
-          model: primaryModel || PROVIDERS[primaryProvider].defaultModel || '',
+          model: primaryModel || PROVIDERS[primaryProvider].defaultEmbeddingModel,
         });
       }
 
       // Find all other providers that have keys available, in priority order
       const availableProviders = this.defaultFallbackOrder.filter((p) => {
-        // Don't duplicate the primary provider if it was already added
         if (p === primaryProvider) return false;
         const key = this.apiKeys[p];
-        return !!key && !!PROVIDERS[p].defaultModel;
+        return !!key && !!PROVIDERS[p].defaultEmbeddingModel;
       });
 
       for (const p of availableProviders) {
         queue.push({
           provider: p,
-          model: PROVIDERS[p].defaultModel || '',
+          model: PROVIDERS[p].defaultEmbeddingModel,
         });
       }
     }
 
-    // If queue is empty, check if we can add any provider just in case the key is provided in options.apiKey
+    // If queue is empty, fallback to default order
     if (queue.length === 0) {
       if (options?.provider) {
         queue.push({
           provider: options.provider,
-          model: options.model || PROVIDERS[options.provider].defaultModel || '',
+          model: options.model || PROVIDERS[options.provider].defaultEmbeddingModel,
         });
       } else {
-        // Try all default priorities as a fallback, hoping at least one has a key
         for (const p of this.defaultFallbackOrder) {
-          if (PROVIDERS[p].defaultModel) {
+          if (PROVIDERS[p].defaultEmbeddingModel) {
             queue.push({
               provider: p,
-              model: PROVIDERS[p].defaultModel || '',
+              model: PROVIDERS[p].defaultEmbeddingModel,
             });
           }
         }
@@ -106,7 +99,16 @@ export class OmniCall {
     // 2. Iterate and attempt calls in sequence
     for (const attempt of queue) {
       const { provider, model } = attempt;
-      const resolvedModel = model || PROVIDERS[provider].defaultModel || '';
+      const resolvedModel = model || PROVIDERS[provider].defaultEmbeddingModel;
+
+      if (!resolvedModel) {
+        errors.push({
+          provider,
+          model: '',
+          error: `Provider ${provider} does not support embeddings.`,
+        });
+        continue;
+      }
 
       // Determine API key for this provider
       const apiKey =
@@ -123,17 +125,14 @@ export class OmniCall {
       }
 
       try {
-        const response = await callProviderAPI(provider, resolvedModel, prompt, apiKey, {
-          temperature: options?.temperature,
-          maxTokens: options?.maxTokens,
-        });
+        const embedding = await callEmbeddingAPI(provider, resolvedModel, prompt, apiKey);
 
         return {
           success: true,
           provider,
           model: resolvedModel,
-          text: response.text,
-          usage: response.usage,
+          embedding,
+          dimensions: embedding.length,
           errors,
         };
       } catch (err: any) {
@@ -146,11 +145,13 @@ export class OmniCall {
     }
 
     // 3. If all attempts failed
+    const fallbackProvider = queue[0]?.provider || 'huggingface';
     return {
       success: false,
-      provider: queue[0]?.provider || 'gemini',
-      model: queue[0]?.model || PROVIDERS.gemini.defaultModel || '',
-      text: '',
+      provider: fallbackProvider,
+      model: queue[0]?.model || PROVIDERS[fallbackProvider].defaultEmbeddingModel || '',
+      embedding: [],
+      dimensions: 0,
       errors,
     };
   }

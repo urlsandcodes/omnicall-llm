@@ -5,11 +5,15 @@ export type ProviderName =
   | 'cerebras'
   | 'openrouter'
   | 'mistral'
-  | 'openai';
+  | 'openai'
+  | 'huggingface'
+  | 'cohere'
+  | 'jina';
 
 export interface ProviderConfig {
   name: ProviderName;
-  defaultModel: string;
+  defaultModel?: string;
+  defaultEmbeddingModel?: string;
   envKey: string;
   baseUrl?: string;
 }
@@ -37,6 +41,25 @@ export interface OmniCallResponse {
     completionTokens: number;
     totalTokens: number;
   };
+  errors: Array<{
+    provider: ProviderName;
+    model: string;
+    error: string;
+  }>;
+}
+
+export interface EmbeddingOptions {
+  model?: string;
+  apiKey?: string;
+  fallback?: FallbackItem[];
+}
+
+export interface EmbeddingResponse {
+  success: boolean;
+  provider: ProviderName;
+  model: string;
+  embedding: number[];
+  dimensions: number;
   errors: Array<{
     provider: ProviderName;
     model: string;

@@ -47,15 +47,17 @@ npm install omnicall-llm
 
 #### Usage
 ```typescript
-import { OmniCall } from 'omnicall-llm';
+import { OmniCall, OmniEmbed } from 'omnicall-llm';
 
-// Reads process.env.GEMINI_API_KEY, process.env.GROQ_API_KEY, etc.
+// 1. Text completion (with LLM fallback)
 const client = new OmniCall();
-
 const result = await client.generate("Write a haiku about recursion.");
-
 console.log(result.text);
-console.log(`Responded by: ${result.provider} (${result.model})`);
+
+// 2. Embedding Generation (with auto-fallback)
+const embedder = new OmniEmbed();
+const embedResponse = await embedder.embed("Semantic search indexes are cool.");
+console.log(embedResponse.embedding.slice(0, 5)); // returns vector array
 ```
 
 ---
@@ -69,15 +71,17 @@ pip install omnicall-llm
 
 #### Usage
 ```python
-from omnicall_llm import OmniCall
+from omnicall_llm import OmniCall, OmniEmbed
 
-# Reads os.environ["GEMINI_API_KEY"], os.environ["GROQ_API_KEY"], etc.
+# 1. Text completion (with LLM fallback)
 client = OmniCall()
-
 result = client.generate("Write a haiku about recursion.")
-
 print(result.text)
-print(f"Responded by: {result.provider} ({result.model})")
+
+# 2. Embedding Generation (with auto-fallback)
+embedder = OmniEmbed()
+embed_response = embedder.embed("Semantic search indexes are cool.")
+print(embed_response.embedding[:5]) # returns vector list
 ```
 
 ---
